@@ -77,11 +77,29 @@ def import_image(name):
     try:
         info = json.loads(subprocess.check_output(
             ['docker', 'inspect', '--type=image', name]))
-        image_id = str(info[0]['Id'].split(':')[1][0:6])
-        image_name = str(info[0]['RepoTags'][0])
+        # image_id = str(info[0]['Id'].split(':')[1][0:6])
+        RepoTags = str(info[0]['RepoTags'][0]).split(':')
+        image_name = RepoTags[0]
+        image_tag = RepoTags[1]
 
-        container = Containers(name=image_name, image_id=image_id,
-                               container_id=None, buildfile=None)
+        # 判断是否存在
+        containers = Containers.query.filter_by(
+            name=image_name, image_tag=image_tag).first()
+        if not containers == None:
+            return False
+
+        cmd = ['docker', 'ps', '-a', '--filter', 'ancestor=' + name,
+               '--format', '\"{{.ID}}\"']
+        container_id = subprocess.check_output(cmd).decode()
+
+        if container_id == '':
+            container_id = None
+        else:
+            # b'"d6c77280b94a"\n"6006a7aa486c"\n'
+            container_id = eval(container_id.split('\n')[0])
+
+        container = Containers(name=image_name, image_tag=image_tag,
+                               container_id=container_id, buildfile=None)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -93,6 +111,7 @@ def import_image(name):
 def import_image_all():
     try:
         # 获取所有image的id
+
         image_ids = subprocess.check_output(
             ['docker', 'images', '-q']).decode('utf-8')
         image_ids = image_ids.split('\n')[0:-1]
@@ -125,7 +144,7 @@ def image_create(name, buildfile, files):
         print(cmd)
         subprocess.call(cmd)
         container = Containers(
-            name=name, buildfile=buildfile, image_id=None, container_id=None,)
+            name=name, buildfile=buildfile, image_tag=None, container_id=None,)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -177,7 +196,7 @@ def image_run(name):
 def image_delete(name):
     print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
-        subprocess.call(['docker', 'image', 'rm', name])
+        subprocess.call(['docker', 'image', 'rmi', name])
         return True
     except subprocess.CalledProcessError:
         return False

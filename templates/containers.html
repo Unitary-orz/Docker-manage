@@ -57,6 +57,8 @@
 					<tr>
 						<td><b>ID</b></td>
 						<td><b>Name</b></td>
+						<td><b>Tag</b></td>
+						<td><b>Container ID</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Ports</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Status</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Setting</b></td>
@@ -67,6 +69,8 @@
 						<tr>
 							<td>{{ c.id }}</td>
 							<td class="container_item" id="{{c.id}}">{{ c.name }}</a></td>
+							<td>{{ c.image_tag }}</td>
+							<td>{% if c.container_id %}{{c.container_id}}{% else %}{{"\\"}}{% endif %}</td>
 							<td class="d-none d-md-table-cell d-lg-table-cell " >{{ c.ports }}</td>
 							<td class="d-none d-md-table-cell d-lg-table-cell">
 								<span>

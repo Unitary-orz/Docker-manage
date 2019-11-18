@@ -95,7 +95,13 @@ def load(app):
     @admins_only
     def delete_container(ID):
         container = Containers.query.filter_by(id=ID).first_or_404()
-        if utils.container_delete(utils.container_status(container.container_id), container.container_id):
+        status = utils.container_status(container.container_id)
+        if status == 'missing':
+            db.session.delete(container)
+            db.session.commit()
+            db.session.close()
+        else:
+            utils.container_delete(status, container.container_id)
             db.session.delete(container)
             db.session.commit()
             db.session.close()
@@ -119,8 +125,7 @@ def load(app):
         name = request.form.get('name')
         if not set(name) <= set('abcdefghijklmnopqrstuvwxyz0123456789-_/'):
             return redirect(url_for('admin_containers.list_container'))
-        # utils.import_image(name=name)
-        utils.import_image_all()
+        utils.import_image(name=name)
         return redirect(url_for('admin_containers.list_container'))
 
     @admin_containers.route('/admin/containers/import_all')
