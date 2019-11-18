@@ -1,3 +1,6 @@
+#!/usr/bin/env pyhton3
+# -*- coding:utf-8 -*-
+
 from CTFd.utils.decorators import admins_only
 from CTFd.utils.user import is_admin
 from CTFd.cache import cache
@@ -9,6 +12,7 @@ import subprocess
 import socket
 import tempfile
 import re
+import sys
 
 
 @cache.memoize()
@@ -19,12 +23,59 @@ def can_create_container():
     except (subprocess.CalledProcessError, OSError):
         return False
 
+def container_status(container_id):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    try:
+        cmd = ['docker', 'inspect', '--type=container', str(container_id)]
+        # print(cmd)
+        info = json.loads(subprocess.check_output(
+            cmd))
+        # print(info)
+        status = info[0]["State"]["Status"]
+        return status
+    except subprocess.CalledProcessError:
+        return 'missing'
+
+
+def container_ports(name, verbose=False):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    try:
+        if not name:
+            return []
+        info = json.loads(subprocess.check_output(
+            ['docker', 'inspect', '--type=container', name]))
+        if verbose:
+            ports = info[0]["NetworkSettings"]["Ports"]
+            if not ports:
+                return []
+            final = []
+            for port in ports.keys():
+                final.append("".join([ports[port][0]["HostPort"], '->', port]))
+            return final
+        else:
+            ports = info[0]['Config']['ExposedPorts'].keys()
+            if not ports:
+                return []
+            ports = [int(re.sub('[A-Za-z/]+', '', port)) for port in ports]
+            return ports
+    except subprocess.CalledProcessError:
+        return []
+
+def is_port_free(port):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    s = socket.socket()
+    result = s.connect_ex(('127.0.0.1', port))
+    if result == 0:
+        s.close()
+        return False
+    return True
 
 def import_image(name):
     try:
         info = json.loads(subprocess.check_output(
             ['docker', 'inspect', '--type=image', name]))
-        container = Containers(name=name, buildfile=None)
+        image_id = str(info[0]['Id'].split(':')[1][0:6])
+        container = Containers(name=name, image_id=image_id, container_id=None, buildfile=None)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -33,7 +84,8 @@ def import_image(name):
         return False
 
 
-def create_image(name, buildfile, files):
+def image_create(name, buildfile, files):
+    print('runing '+sys._getframe().f_code.co_name+' function')
     if not can_create_container():
         return False
     folder = tempfile.mkdtemp(prefix='ctfd')
@@ -51,7 +103,7 @@ def create_image(name, buildfile, files):
         cmd = ['docker', 'build', '-f', tmpfile.name, '-t', name, folder]
         print(cmd)
         subprocess.call(cmd)
-        container = Containers(name, buildfile)
+        container = Containers(name=name, buildfile=buildfile, image_id=None, container_id=None,)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -60,26 +112,8 @@ def create_image(name, buildfile, files):
     except subprocess.CalledProcessError:
         return False
 
-
-def is_port_free(port):
-    s = socket.socket()
-    result = s.connect_ex(('127.0.0.1', port))
-    if result == 0:
-        s.close()
-        return False
-    return True
-
-
-def delete_image(name):
-    try:
-        subprocess.call(['docker', 'rm', name])
-        subprocess.call(['docker', 'rmi', name])
-        return True
-    except subprocess.CalledProcessError:
-        return False
-
-
-def run_image(name):
+def image_run(name):
+    print('runing '+sys._getframe().f_code.co_name+' function')
     try:
         info = json.loads(subprocess.check_output(
             ['docker', 'inspect', '--type=image', name]))
@@ -100,59 +134,61 @@ def run_image(name):
             else:
                 cmd.append('-p')
                 ports_used.append('{}'.format(port))
-        cmd += ['--name', name, name]
-        print(cmd)
+        # eg:citizenstig/dvwa(get dvwa)
+        container_name = name.split('/')[-1]
+        # cmd += ['--name', container_name, name]
+        cmd += [name]
+        # print(cmd)
+        container_id = subprocess.check_output(cmd)[0:6]
+        # print(container_id)
+        container = Containers.query.filter_by(name=name).first_or_404()
+        container.container_id = container_id
+        db.session.commit()
+        db.session.close()
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def image_delete(name):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    try:
+        subprocess.call(['docker', 'image','rm', name])
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def container_start(container_id):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    try:
+        cmd = ['docker', 'start', container_id]
         subprocess.call(cmd)
         return True
     except subprocess.CalledProcessError:
         return False
 
 
-def container_start(name):
+def container_stop(container_id):
+    print('runing '+sys._getframe().f_code.co_name+' function')
     try:
-        cmd = ['docker', 'start', name]
+        cmd = ['docker', 'stop', container_id]
+        subprocess.call(cmd)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+def container_delete(containner_status,container_id):
+    print('runing '+sys._getframe().f_code.co_name+' function')
+    if containner_status == 'running':
+        container_stop(container_id)
+    try:
+        cmd = ['docker', 'rm', container_id]
         subprocess.call(cmd)
         return True
     except subprocess.CalledProcessError:
         return False
 
 
-def container_stop(name):
-    try:
-        cmd = ['docker', 'stop', name]
-        subprocess.call(cmd)
-        return True
-    except subprocess.CalledProcessError:
-        return False
 
 
-def container_status(name):
-    try:
-        data = json.loads(subprocess.check_output(
-            ['docker', 'inspect', '--type=container', name]))
-        status = data[0]["State"]["Status"]
-        return status
-    except subprocess.CalledProcessError:
-        return 'missing'
 
 
-def container_ports(name, verbose=False):
-    try:
-        info = json.loads(subprocess.check_output(
-            ['docker', 'inspect', '--type=container', name]))
-        if verbose:
-            ports = info[0]["NetworkSettings"]["Ports"]
-            if not ports:
-                return []
-            final = []
-            for port in ports.keys():
-                final.append("".join([ports[port][0]["HostPort"], '->', port]))
-            return final
-        else:
-            ports = info[0]['Config']['ExposedPorts'].keys()
-            if not ports:
-                return []
-            ports = [int(re.sub('[A-Za-z/]+', '', port)) for port in ports]
-            return ports
-    except subprocess.CalledProcessError:
-        return []
