@@ -23,8 +23,9 @@ def can_create_container():
     except (subprocess.CalledProcessError, OSError):
         return False
 
+
 def container_status(container_id):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
         cmd = ['docker', 'inspect', '--type=container', str(container_id)]
         # print(cmd)
@@ -38,7 +39,7 @@ def container_status(container_id):
 
 
 def container_ports(name, verbose=False):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
         if not name:
             return []
@@ -61,8 +62,9 @@ def container_ports(name, verbose=False):
     except subprocess.CalledProcessError:
         return []
 
+
 def is_port_free(port):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     s = socket.socket()
     result = s.connect_ex(('127.0.0.1', port))
     if result == 0:
@@ -70,12 +72,16 @@ def is_port_free(port):
         return False
     return True
 
+
 def import_image(name):
     try:
         info = json.loads(subprocess.check_output(
             ['docker', 'inspect', '--type=image', name]))
         image_id = str(info[0]['Id'].split(':')[1][0:6])
-        container = Containers(name=name, image_id=image_id, container_id=None, buildfile=None)
+        image_name = str(info[0]['RepoTags'][0])
+
+        container = Containers(name=image_name, image_id=image_id,
+                               container_id=None, buildfile=None)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -84,8 +90,23 @@ def import_image(name):
         return False
 
 
+def import_image_all():
+    try:
+        # 获取所有image的id
+        image_ids = subprocess.check_output(
+            ['docker', 'images', '-q']).decode('utf-8')
+        image_ids = image_ids.split('\n')[0:-1]
+
+        for image_id in image_ids:
+            import_image(image_id)
+
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
 def image_create(name, buildfile, files):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     if not can_create_container():
         return False
     folder = tempfile.mkdtemp(prefix='ctfd')
@@ -103,7 +124,8 @@ def image_create(name, buildfile, files):
         cmd = ['docker', 'build', '-f', tmpfile.name, '-t', name, folder]
         print(cmd)
         subprocess.call(cmd)
-        container = Containers(name=name, buildfile=buildfile, image_id=None, container_id=None,)
+        container = Containers(
+            name=name, buildfile=buildfile, image_id=None, container_id=None,)
         db.session.add(container)
         db.session.commit()
         db.session.close()
@@ -112,9 +134,11 @@ def image_create(name, buildfile, files):
     except subprocess.CalledProcessError:
         return False
 
+
 def image_run(name):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
+        print(name)
         info = json.loads(subprocess.check_output(
             ['docker', 'inspect', '--type=image', name]))
 
@@ -149,16 +173,18 @@ def image_run(name):
     except subprocess.CalledProcessError:
         return False
 
+
 def image_delete(name):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
-        subprocess.call(['docker', 'image','rm', name])
+        subprocess.call(['docker', 'image', 'rm', name])
         return True
     except subprocess.CalledProcessError:
         return False
 
+
 def container_start(container_id):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
         cmd = ['docker', 'start', container_id]
         subprocess.call(cmd)
@@ -168,7 +194,7 @@ def container_start(container_id):
 
 
 def container_stop(container_id):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     try:
         cmd = ['docker', 'stop', container_id]
         subprocess.call(cmd)
@@ -176,8 +202,9 @@ def container_stop(container_id):
     except subprocess.CalledProcessError:
         return False
 
-def container_delete(containner_status,container_id):
-    print('runing '+sys._getframe().f_code.co_name+' function')
+
+def container_delete(containner_status, container_id):
+    print('runing ' + sys._getframe().f_code.co_name + ' function')
     if containner_status == 'running':
         container_stop(container_id)
     try:
@@ -186,9 +213,3 @@ def container_delete(containner_status,container_id):
         return True
     except subprocess.CalledProcessError:
         return False
-
-
-
-
-
-
