@@ -1,12 +1,14 @@
 from CTFd.utils.decorators import admins_only
 from CTFd.utils.user import is_admin
 from CTFd.cache import cache
+from CTFd.models import db
 from .models import Containers
 
 import json
 import subprocess
 import socket
 import tempfile
+import re
 
 
 @cache.memoize()

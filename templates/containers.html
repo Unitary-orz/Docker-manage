@@ -1,6 +1,93 @@
 {% extends "admin/base.html" %}
 
 {% block content %}
+<div class="jumbotron">
+	<div class="container">
+		<h1>Container
+			<!-- <a class="no-decoration" href="{{ url_for('admin.challenges_new') }}">
+				<span role="button" data-toggle="tooltip" title="Create Container">
+					<i class="btn-fa fas fa-plus-circle"></i>
+				</span>
+			</a> -->
+		</h1>
+	</div>
+</div>
+
+
+<div class="container">
+	<div class="row">
+	    <div class="col-md-12">
+	        {% if q and field%}
+	        <h4 class="text-center">Searching for container with {{field}} matching {{q}}</h4>
+	        {% endif %}
+			<!-- 搜索框 -->
+	        <form method="GET" class="form-inline">
+	                <div class="form-group col-md-2">
+	                    <label for="sel1" class="sr-only" >Search Field</label>
+	                    <select name="field" class="form-control w-100" id="sel1">
+	                        <option value="name" {% if field == 'name' %}selected{% endif %}>Name</option>
+	                        <option value="id" {% if field == 'id' %}selected{% endif %}>ID</option>
+	                        <option value="status" {% if field == 'status' %}selected{% endif %}>Status</option>
+	                        <option value="port" {% if field == 'port' %}selected{% endif %}>Port</option>
+	                  </select>
+	                </div>
+	                <div class="form-group col-md-8">
+	                    <label for="team-name-search" class="sr-only">Parameter</label>
+	                    <input type="text" class="form-control w-100" id="team-name-search" name="q" placeholder="Search for matching container" {% if q %}value="{{q}}"{% endif %}>
+	                </div>
+	                <div class="form-group col-md-2">
+	                    <label for="team-name-search" class="sr-only">Search</label>
+	                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-search" aria-hidden="true"></i></button>
+	                </div>
+	        </form>
+
+	       	<br>
+	       	<div class="row">
+		       	<div style="text-align:center">
+					<button class="btn btn-theme btn-outlined " data-toggle="modal" data-target="#create-container-modal">
+				New Container
+					</button>
+					<button class="btn btn-theme btn-outlined " data-toggle="modal" data-target="#import-container-modal">
+				Import Image
+					</button>
+				</div>
+			</div>
+	       	<table id="challenges" class="table table-striped">
+					<thead>
+					<tr>
+						<td><b>ID</b></td>
+						<td><b>Name</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Ports</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Status</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Setting</b></td>
+					</tr>
+					</thead>
+					<tbody>
+					{% for c in containers %}
+						<tr>
+							<td>{{ c.id }}</td>
+							<td class="container_item" id="{{c.id}}">{{ c.name }}</a></td>
+							<td class="d-none d-md-table-cell d-lg-table-cell container_item" id="{{ c.id }}">{{ c.port }}</td>
+							<td class="d-none d-md-table-cell d-lg-table-cell">
+								<span>
+									{% if c.status != 'running' %}
+									<i class="fa fa-play"></i>
+									{% else %}
+									<i class="fa fa-stop"></i>
+									{% endif %}
+									<i class="fa fa-times"></i>
+								</span>
+							<td class="d-none d-md-table-cell d-lg-table-cell text-center">{{ c.status }}</td>
+							</td>
+						</tr>
+					{% endfor %}
+					</tbody>
+				</table>             
+	    </div>
+	</div>
+</div>
+	
+
 <div class="modal fade" id="create-container-modal" tabindex="-1" role="dialog" aria-labelledby="container-modal-label">
 	<div class="modal-dialog" role="document">
 		<div class="modal-content">
@@ -86,54 +173,6 @@
 </div>
 
 
-<div class="row">
-	<br>
-	<div style="text-align:center">
-		<h1>Containers</h1>
-		<button class="btn btn-theme btn-outlined create-challenge" data-toggle="modal" data-target="#create-container-modal">
-			New Container
-		</button>
-		<button class="btn btn-theme btn-outlined create-challenge" data-toggle="modal" data-target="#import-container-modal">
-			Import Image
-		</button>
-	</div>
-	<br>
-{% if containers %}
-	<table id="teamsboard">
-		<thead>
-			<tr>
-				<td class="text-center"><strong>Status</strong>
-				</td>
-				<td class="text-center"><strong>Name</strong>
-				</td>
-				<td class="text-center"><strong>Ports</strong>
-				</td>
-				<td class="text-center"><strong>Settings</strong>
-				</td>
-			</tr>
-		</thead>
-		<tbody>
-		{% for c in containers %}
-			<tr>
-				<td class="text-center">{{ c.status }}</td>
-				<td class="text-center container_item" id="{{ c.id }}">{{ c.name }}</td>
-				<td class="text-center">{{ c.ports }}</td>
-				<td class="text-center">
-					<span>
-						{% if c.status != 'running' %}
-						<i class="fa fa-play"></i>
-						{% else %}
-						<i class="fa fa-stop"></i>
-						{% endif %}
-						<i class="fa fa-times"></i>
-					</span>
-				</td>
-			</tr>
-		{% endfor %}
-		</tbody>
-	</table>
-{% endif %}
-</div>
 {% endblock %}
 
 {% block scripts %}
