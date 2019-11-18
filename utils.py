@@ -1,5 +1,6 @@
-from CTFd.utils import admins_only, is_admin, cache
-from CTFd.models import db
+from CTFd.utils.decorators import admins_only
+from CTFd.utils.user import is_admin
+from CTFd.cache import cache
 from .models import Containers
 
 import json
@@ -19,7 +20,8 @@ def can_create_container():
 
 def import_image(name):
     try:
-        info = json.loads(subprocess.check_output(['docker', 'inspect', '--type=image', name]))
+        info = json.loads(subprocess.check_output(
+            ['docker', 'inspect', '--type=image', name]))
         container = Containers(name=name, buildfile=None)
         db.session.add(container)
         db.session.commit()
@@ -77,11 +79,13 @@ def delete_image(name):
 
 def run_image(name):
     try:
-        info = json.loads(subprocess.check_output(['docker', 'inspect', '--type=image', name]))
+        info = json.loads(subprocess.check_output(
+            ['docker', 'inspect', '--type=image', name]))
 
         try:
             ports_asked = info[0]['Config']['ExposedPorts'].keys()
-            ports_asked = [int(re.sub('[A-Za-z/]+', '', port)) for port in ports_asked]
+            ports_asked = [int(re.sub('[A-Za-z/]+', '', port))
+                           for port in ports_asked]
         except KeyError:
             ports_asked = []
 
@@ -122,17 +126,18 @@ def container_stop(name):
 
 def container_status(name):
     try:
-        data = json.loads(subprocess.check_output(['docker', 'inspect', '--type=container', name]))
+        data = json.loads(subprocess.check_output(
+            ['docker', 'inspect', '--type=container', name]))
         status = data[0]["State"]["Status"]
         return status
     except subprocess.CalledProcessError:
         return 'missing'
 
 
-
 def container_ports(name, verbose=False):
     try:
-        info = json.loads(subprocess.check_output(['docker', 'inspect', '--type=container', name]))
+        info = json.loads(subprocess.check_output(
+            ['docker', 'inspect', '--type=container', name]))
         if verbose:
             ports = info[0]["NetworkSettings"]["Ports"]
             if not ports:

@@ -1,14 +1,17 @@
 from flask import current_app as app, render_template, request, redirect, jsonify, url_for, Blueprint
-from CTFd.utils import admins_only, is_admin, cache
+from CTFd.utils.decorators import admins_only
+from CTFd.utils.user import is_admin
+from CTFd.cache import cache
 from CTFd.models import db
 from .models import Containers
 
 from . import utils
 
+
 def load(app):
     app.db.create_all()
-    admin_containers = Blueprint('admin_containers', __name__, template_folder='templates')
-
+    admin_containers = Blueprint(
+        'admin_containers', __name__, template_folder='templates')
 
     @admin_containers.route('/admin/containers', methods=['GET'])
     @admins_only
@@ -19,7 +22,6 @@ def load(app):
             c.ports = ', '.join(utils.container_ports(c.name, verbose=True))
         return render_template('containers.html', containers=containers)
 
-
     @admin_containers.route('/admin/containers/<int:container_id>/stop', methods=['POST'])
     @admins_only
     def stop_container(container_id):
@@ -28,7 +30,6 @@ def load(app):
             return '1'
         else:
             return '0'
-
 
     @admin_containers.route('/admin/containers/<int:container_id>/start', methods=['POST'])
     @admins_only
@@ -45,7 +46,6 @@ def load(app):
             else:
                 return '0'
 
-
     @admin_containers.route('/admin/containers/<int:container_id>/delete', methods=['POST'])
     @admins_only
     def delete_container(container_id):
@@ -55,7 +55,6 @@ def load(app):
             db.session.commit()
             db.session.close()
         return '1'
-
 
     @admin_containers.route('/admin/containers/new', methods=['POST'])
     @admins_only
@@ -68,7 +67,6 @@ def load(app):
         utils.create_image(name=name, buildfile=buildfile, files=files)
         utils.run_image(name)
         return redirect(url_for('admin_containers.list_container'))
-
 
     @admin_containers.route('/admin/containers/import', methods=['POST'])
     @admins_only
