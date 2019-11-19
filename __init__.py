@@ -55,16 +55,12 @@ def load(app):
         containers = Containers.query.order_by(
             Containers.id.asc()).slice(page_start, page_end).all()
         for c in containers:
-            c.status = utils.container_status(c.container_id)
-            c.ports = ', '.join(utils.container_ports(
-                c.container_id, verbose=True))
+            c.status, c.run_port = utils.container_status(c.container_id)
+            # c.ports = ', '.join(utils.container_ports(
+            #     c.container_id, verbose=True))
         count = db.session.query(db.func.count(Containers.id)).first()[0]
         pages = int(count / results_per_page) + (count % results_per_page > 0)
 
-        # containers = Containers.query.all()
-        # for c in containers:
-        #     c.status = utils.container_status(c.container_id)
-        #     c.ports = ', '.join(utils.container_ports(c.name, verbose=True))
         return render_template('containers.html', containers=containers, pages=pages, curr_page=page)
 
     @admin_containers.route('/admin/containers/<int:ID>/stop', methods=['POST'])
@@ -80,8 +76,9 @@ def load(app):
     @admins_only
     def run_container(ID):
         container = Containers.query.filter_by(id=ID).first_or_404()
-        if utils.container_status(container.container_id) == 'missing':
-            if utils.image_run(container.name):
+        status, ports = utils.container_status(container.container_id)
+        if status == 'missing':
+            if utils.image_run(container.name, container.ports):
                 return '1'
             else:
                 return '0'
@@ -95,16 +92,13 @@ def load(app):
     @admins_only
     def delete_container(ID):
         container = Containers.query.filter_by(id=ID).first_or_404()
-        status = utils.container_status(container.container_id)
+        status, ports = utils.container_status(container.container_id)
         if status == 'missing':
             db.session.delete(container)
             db.session.commit()
             db.session.close()
         else:
             utils.container_delete(status, container.container_id)
-            db.session.delete(container)
-            db.session.commit()
-            db.session.close()
         return '1'
 
     @admin_containers.route('/admin/containers/new', methods=['POST'])
@@ -123,15 +117,27 @@ def load(app):
     @admins_only
     def import_container():
         name = request.form.get('name')
-        if not set(name) <= set('abcdefghijklmnopqrstuvwxyz0123456789-_/'):
+        ports = request.form.get('ports')
+        print('port: ', ports, name)
+        if not set(name) <= set('abcdefghijklmnopqrstuvwxyz0123456789-_/:.'):
             return redirect(url_for('admin_containers.list_container'))
-        utils.import_image(name=name)
+        utils.import_image(name=name, ports=ports)
         return redirect(url_for('admin_containers.list_container'))
 
     @admin_containers.route('/admin/containers/import_all')
     @admins_only
     def import_image_all():
-        utils.import_image_all()
+        utils.image_import_all()
+        return redirect(url_for('admin_containers.list_container'))
+
+    @admin_containers.route('/admin/containers/<int:ID>/update', methods=['POST'])
+    @admins_only
+    def update_port(ID):
+        ports = request.form.get('ports')
+        container = Containers.query.filter_by(id=ID).first_or_404()
+        container.ports = ports
+        db.session.commit()
+        db.session.close()
         return redirect(url_for('admin_containers.list_container'))
 
     app.register_blueprint(admin_containers)

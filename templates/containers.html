@@ -57,11 +57,10 @@
 					<tr>
 						<td><b>ID</b></td>
 						<td><b>Name</b></td>
-						<td><b>Tag</b></td>
 						<td><b>Container ID</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Ports</b></td>
-						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Status</b></td>
-						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Setting</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Setting</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Status</b></td>
 					</tr>
 					</thead>
 					<tbody>
@@ -69,17 +68,21 @@
 						<tr>
 							<td>{{ c.id }}</td>
 							<td class="container_item" id="{{c.id}}">{{ c.name }}</a></td>
-							<td>{{ c.image_tag }}</td>
-							<td>{% if c.container_id %}{{c.container_id}}{% else %}{{"\\"}}{% endif %}</td>
-							<td class="d-none d-md-table-cell d-lg-table-cell " >{{ c.ports }}</td>
-							<td class="d-none d-md-table-cell d-lg-table-cell">
+							<td>{% if c.container_id %}{{c.container_id}}{% else %}{{"no container"}}{% endif %}</td>
+							<td></span>{% if c.status == 'missing' %}{{ c.ports }} <i class="fa fa-edit"></i>{% else %}{{ c.run_port }}{% endif %} </td>
+							<td>
 								<span>
 									{% if c.status != 'running' %}
 									<i class="fa fa-play"></i>
 									{% else %}
 									<i class="fa fa-stop"></i>
 									{% endif %}
+									{% if c.status == 'missing' %}
+									<i class="fa fa-times-circle"></i>
+									{% else %}
 									<i class="fa fa-times"></i>
+									{% endif %}
+									
 								</span>
 							<td class="d-none d-md-table-cell d-lg-table-cell text-center">{{ c.status }}</td>
 							</td>
@@ -98,7 +101,7 @@
 			<div class="modal-header">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
 						aria-hidden="true">&times;</span></button>
-				<h4 class="modal-title" id="container-modal-label">Create Container</h4>
+				<h4 class="modal-title" id="container-modal-label">Create Image</h4>
 			</div>
 			<form method="POST" action="{{ request.script_root }}/admin/containers/new" enctype="multipart/form-data">
 				<div class="modal-body">
@@ -139,7 +142,11 @@
 				<div class="modal-body">
 						<div class="form-group">
 							<label for="name">Name</label>
-							<input type="text" class="form-control" name="name" placeholder="Enter image name">
+							<input type="text" class="form-control" name="name" placeholder="Enter image name or image id">
+						</div>
+						<div class="form-group">
+							<label for="ports">Port</label>
+							<input type="text" class="form-control" name="ports" placeholder="eg: 8080:80,3306:3306">
 						</div>
 						<input type="hidden" value="{{ nonce }}" name="nonce" id="nonce">
 				</div>
@@ -152,11 +159,36 @@
 	</div>
 </div>
 
+<!-- 端口修改 -->
+<div class="modal fade" id="edit-ports" tabindex="-1">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+						aria-hidden="true">&times;</span></button>
+				<h4 class="modal-title" id="container-modal-label">Edit port</h4>
+			</div>
+			<form method="POST" action="{{ request.script_root }}/admin/containers/update" enctype="multipart/form-data">
+				<div class="modal-body">
+						<div class="form-group">
+							<label for="ports">Port</label>
+							<input type="text" class="form-control" name="ports" placeholder="eg: 8080:80,3306:3306">
+						</div>
+						<input type="hidden" value="{{ nonce }}" name="nonce" id="nonce">
+				</div>
+				<div class="modal-footer">
+					<button type="submit" class="btn btn-primary">Update</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+
 <div id="confirm" class="modal fade" tabindex="-1">
 	<div class="modal-dialog">
 		<div class="modal-content">
 			<div class="modal-header">
-				<h2 class="text-center"><span id="confirm-container-title"></span> Container</h2>
+				<h2 class="text-center"><span id="confirm-container-title"></span> <span id="confirm-container-type"></span></h2>
 			</div>
 			<div class="modal-body" style="height:110px">
 				<div class="row-fluid">
@@ -182,13 +214,19 @@
 {% block scripts %}
 <script>
 
-function load_confirm_modal(title, url, container_name){
+function load_confirm_modal(type,title, url, container_name){
 	var modal = $('#confirm')
 	modal.find('#confirm-container-name').text(container_name)
 	modal.find('#confirm-container-title').text(title)
 	modal.find('#confirm-container-method').text(title.toLowerCase())
+	modal.find('#confirm-container-type').text(type)
 	$('#confirm form').attr('action', url);
 	$('#confirm').modal('show');
+}
+
+function edit(url){
+	$('#edit-ports form').attr('action', url);
+	$('#edit-ports').modal('show');
 }
 
 $('#confirm-container').click(function(e){
@@ -208,21 +246,37 @@ $('.fa-times').click(function(){
 	var elem = $(this).parent().parent().parent().find('.container_item');
 	var container = elem.attr('id');
 	var container_name = elem.text().trim();
-	load_confirm_modal('Delete', '/admin/containers/'+container+'/delete', container_name)
+	load_confirm_modal('Container','Delete', '/admin/containers/'+container+'/delete', container_name)
 });
 
 $('.fa-play').click(function(){
 	var elem = $(this).parent().parent().parent().find('.container_item');
 	var container = elem.attr('id');
 	var container_name = elem.text().trim();
-	load_confirm_modal('Start', '/admin/containers/'+container+'/start', container_name)
+	load_confirm_modal('Container','Start', '/admin/containers/'+container+'/start', container_name)
 });
 
 $('.fa-stop').click(function(){
 	var elem = $(this).parent().parent().parent().find('.container_item');
 	var container = elem.attr('id');
 	var container_name = elem.text().trim();
-	load_confirm_modal('Stop', '/admin/containers/'+container+'/stop', container_name)
+	load_confirm_modal('Container','Stop', '/admin/containers/'+container+'/stop', container_name)
+});
+
+// image delete
+$('.fa-times-circle').click(function(){
+	var elem = $(this).parent().parent().parent().find('.container_item');
+	var container = elem.attr('id');
+	var container_name = elem.text().trim();
+	load_confirm_modal('Image','Delete', '/admin/containers/'+container+'/delete', container_name)
+});
+
+// port edit
+$('.fa-edit').click(function(){
+	var elem = $(this).parent().parent().find('.container_item');
+	var container = elem.attr('id');
+	var container_name = elem.text().trim();
+	edit('/admin/containers/'+container+'/update');
 });
 
 $(document).ready(function(){
