@@ -110,7 +110,6 @@ def load(app):
         buildfile = request.form.get('buildfile')
         files = request.files.getlist('files[]')
         utils.create_image(name=name, buildfile=buildfile, files=files)
-        utils.image_run(name)
         return redirect(url_for('admin_containers.list_container'))
 
     @admin_containers.route('/admin/containers/import', methods=['POST'])

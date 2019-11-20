@@ -44,12 +44,21 @@
 	       	<br>
 	       	<div class="row">
 		       	<div style="text-align:center">
-					<button class="btn btn-theme btn-outlined " data-toggle="modal" data-target="#create-container-modal">
-				New Container
-					</button>
-					<button class="btn btn-theme btn-outlined " data-toggle="modal" data-target="#import-container-modal">
-				Import Image
-					</button>
+					<button class="btn btn-outline-dark " data-toggle="modal" data-target="#create-container-modal">
+				Bulid New Image(Beta)
+					</button>					
+					<div class="btn-group">
+						<button type="button" class="btn btn-outline-dark dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+					    Import Image
+					  	</button>
+					  	<div class="dropdown-menu">
+					    	<a class="dropdown-item" data-toggle="modal" data-target="#import-container-modal">Import One Image</a>
+					    	<a class="dropdown-item" href="{{ request.script_root }}/admin/containers/import_all">Import All Existing Import</a>
+					<!--     <div class="dropdown-divider"></div>
+					    <a class="dropdown-item" href="#">Separated link</a> -->
+					  </div>
+					</div>
+	
 				</div>
 			</div>
 	       	<table id="challenges" class="table table-striped">
@@ -60,31 +69,41 @@
 						<td><b>Container ID</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Ports</b></td>
 						<td class="d-none d-md-table-cell d-lg-table-cell"><b>Setting</b></td>
-						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Status</b></td>
+						<td class="d-none d-md-table-cell d-lg-table-cell text-center"><b>Container Status</b></td>
 					</tr>
 					</thead>
 					<tbody>
 					{% for c in containers %}
 						<tr>
 							<td>{{ c.id }}</td>
-							<td class="container_item" id="{{c.id}}">{{ c.name }}</a></td>
+							<td class="container_item" id="{{c.id}}">{{ c.name }}</td>
 							<td>{% if c.container_id %}{{c.container_id}}{% else %}{{"no container"}}{% endif %}</td>
 							<td></span>{% if c.status == 'missing' %}{{ c.ports }} <i class="fa fa-edit"></i>{% else %}{{ c.run_port }}{% endif %} </td>
 							<td>
 								<span>
 									{% if c.status != 'running' %}
-									<i class="fa fa-play"></i>
+									<i class="fa fa-play" title="run container"></i>
 									{% else %}
-									<i class="fa fa-stop"></i>
-									{% endif %}
-									{% if c.status == 'missing' %}
-									<i class="fa fa-times-circle"></i>
-									{% else %}
-									<i class="fa fa-times"></i>
+									<i class="fa fa-stop" title="stop container"></i>
 									{% endif %}
 									
+									{% if c.status != 'missing' %}
+									<i class="fa fa-times" title="delete container"></i>
+									{% endif %}
+									<i class="fa fa-times-circle" title="delete image"></i>
 								</span>
-							<td class="d-none d-md-table-cell d-lg-table-cell text-center">{{ c.status }}</td>
+							<td class="d-none d-md-table-cell d-lg-table-cell text-center">
+								{% if c.status == 'missing' %}
+								{% set badge_state = 'badge-danger' %}
+								{% else %}
+								{% set badge_state = 'badge-warning' %}
+								{% endif %}
+								{% if c.status == 'running' %}
+								{% set badge_state = 'badge-success' %}
+								{% endif %}
+								
+
+								<span class="badge {{ badge_state }}">{{ c.status }}</span>
 							</td>
 						</tr>
 					{% endfor %}
@@ -101,17 +120,17 @@
 			<div class="modal-header">
 				<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
 						aria-hidden="true">&times;</span></button>
-				<h4 class="modal-title" id="container-modal-label">Create Image</h4>
+				<h4 class="modal-title" id="container-modal-label">Bulid New Image</h4>
 			</div>
 			<form method="POST" action="{{ request.script_root }}/admin/containers/new" enctype="multipart/form-data">
 				<div class="modal-body">
 						<div class="form-group">
 							<label for="name">Name</label>
-							<input type="text" class="form-control" name="name" placeholder="Enter container name">
+							<input type="text" class="form-control" name="name" placeholder="Enter image name">
 						</div>
 						<div class="form-group">
 							<label for="buildfile-editor" class="control-label">Build File</label>
-							<textarea id="buildfile-editor" class="form-control" name="buildfile" rows="10" placeholder="Enter container build file"></textarea>
+							<textarea id="buildfile-editor" class="form-control" name="buildfile" rows="10" placeholder="Enter image build file"></textarea>
 						</div>
 						<div class="form-group">
 							<label for="container-files">Associated Files
@@ -151,7 +170,7 @@
 						<input type="hidden" value="{{ nonce }}" name="nonce" id="nonce">
 				</div>
 				<div class="modal-footer">
-					<a href="{{ request.script_root }}/admin/containers/import_all">All import</a>
+					
 					<button type="submit" class="btn btn-primary">Create</button>
 				</div>
 			</form>
